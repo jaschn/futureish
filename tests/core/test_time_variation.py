@@ -57,7 +57,7 @@ def dataset_verify(dataset: Dataset, input_len: int, unit: list[str]):
 
     train_data = train_dataset.create_training_data()
     assert train_data.height > 0, f"Training data height is {train_data.height}, expected > 0"
-    assert train_data.select(pl.col("X").first().arr.len()).item() > 0, f"Training data features length is {train_data.select(pl.col("X").first().arr.len()).item()}, expected > 0"
+    assert train_data.select(pl.col("X").first().arr.len()).item() > 0, f'Training data features length is {train_data.select(pl.col("X").first().arr.len()).item()}, expected > 0'
     assert train_dataset.config.sub_features_names is not None, "Sub features names should not be None"
     assert len(train_dataset.config.sub_features_names) == train_data.select(pl.col("X").first().arr.len()).item()
     prediction_dataset.create_all_single_points()
