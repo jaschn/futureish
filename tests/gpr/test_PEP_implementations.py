@@ -80,7 +80,7 @@ def test_maximum_likelihood(case):
     m_online = OSGPR_PEP(X, Y, kern, mu, Su, Kaa, Zopt, Zinit, alpha, lk, verify=True) # type: ignore
     online_l = m_online._maximum_log_likelihood_objective()
 
-    assert pytest.approx(online_l.item(), rel=1e-2) == case["online_likelihood"], f"Expected {case["online_likelihood"]}, but got {online_l.item()}"
+    assert pytest.approx(online_l.item(), rel=1e-2) == case["online_likelihood"], f"Expected {case['online_likelihood']}, but got {online_l.item()}"
 
     pred_online = m_online(X_pred)
 

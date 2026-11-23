@@ -759,11 +759,9 @@ requires-dist = [
     { name = "catboost", specifier = ">=1.2.10" },
     { name = "gpytorch", specifier = ">=1.15.2" },
     { name = "linear-operator" },
-    { name = "numpy", specifier = ">=2.0" },
     { name = "numpy", specifier = ">=2.4.6" },
     { name = "polars", specifier = ">=2.1.0" },
     { name = "torch", specifier = ">=2.14.1" },
-    { name = "tqdm", specifier = ">=4.68.3" },
     { name = "tqdm", specifier = ">=4.70.1" },
 ]
 

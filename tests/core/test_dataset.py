@@ -894,7 +894,7 @@ def test_random_subset(long_data_with_gaps: pl.DataFrame, seed: int):
 
     pred_subset = predict_dataset.random_subset(50, random_seed=seed, pred_len=predict_dataset.config.step_size.to_string())
     assert pred_subset.valid_t0.height == 50, f"Expected 50 valid_t0 in random subset, got {pred_subset.valid_t0.height}"
-    assert pred_subset.create_all_trajectories(pred_subset.config.step_size.to_string()).select(pl.col("traj_id").n_unique()).item() == 50, f"Expected 50 unique trajectory IDs in random subset, got {pred_subset.create_all_trajectories(pred_subset.config.step_size.to_string()).select(pl.col("traj_id").n_unique()).item()}"
+    assert pred_subset.create_all_trajectories(pred_subset.config.step_size.to_string()).select(pl.col("traj_id").n_unique()).item() == 50, f'Expected 50 unique trajectory IDs in random subset, got {pred_subset.create_all_trajectories(pred_subset.config.step_size.to_string()).select(pl.col("traj_id").n_unique()).item()}'
     pred_subset2 = pred_subset.random_subset(20, random_seed=seed)
     assert pred_subset2.valid_t0.height == 20, f"Expected 20 valid_t0 in random subset, got {pred_subset2.valid_t0.height}"
     assert pred_subset2.create_all_trajectories(pred_subset2.config.step_size.to_string()).select(pl.col("traj_id").n_unique()).item() == 20, f"Expected 20 unique trajectory IDs in random subset, got {pred_subset2.create_all_trajectories(pred_subset2.config.step_size.to_string()).select(pl.col('traj_id').n_unique()).item()}"
