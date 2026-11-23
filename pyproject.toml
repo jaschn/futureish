@@ -1,11 +1,13 @@
 [project]
 name = "futureish"
 version = "0.1.0"
-description = "Timeseries forecasting Library using polars, gpytorch and catboost with uncertainty quantification."
+description = "Uncertainty aware time series library with online update/training support."
 readme = "README.md"
 authors = [
     { name = "Jakob Schneider", email = "git@jaschn.de" }
 ]
+license-files = ["LICENSE"]
+
 requires-python = ">=3.11"
 dependencies = [
     "catboost>=1.2.10",
@@ -14,8 +16,6 @@ dependencies = [
     "tqdm>=4.70.1",
     "gpytorch>=1.15.2",
     "linear-operator",
-    "numpy>=2.0",
-    "tqdm>=4.68.3",
     "torch>=2.14.1",
 ]
 
@@ -26,7 +26,7 @@ environments = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.11.21,<0.12.0"]
+requires = ["uv_build>=0.11.21,<0.13.0"]
 build-backend = "uv_build"
 
 [tool.uv]

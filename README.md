@@ -13,7 +13,13 @@ It features a powerfull interface and functions for defining inputs, targets and
 
 ## Installation
 
-#TODO: publish on pip
+```bash
+pip install futureish
+```
+or
+```bash
+uv add futureish
+```
 
 ## Quick start
 
