@@ -11,6 +11,8 @@ It features a powerfull interface and functions for defining inputs, targets and
 - GPyTorch Gaussian-process backends, including sparse and online PEP models
 - CatBoost backend
 
+![\[\](examples/prediction_example.png)](examples/prediction_example.png)
+
 ## Installation
 
 ```bash
@@ -54,8 +56,8 @@ dataset = Dataset(
 train_dataset, test_dataset = dataset.split_training_and_test_data(0.8)
 
 model = Forecaster(GPyTorchOnlinePEP.wrapped(100, use_cuda=torch.cuda.is_available()))
-model.fit(train_dataset, config=GPyTorchFitConfig(time_limit=120)) # train for 120 seconds
-traj_data, ground_truth = test_dataset.create_prediction_trajectory(t0_offset="6h", pred_len="2d") 
+model.fit(train_dataset, config=GPyTorchFitConfig(time_limit=60)) # train for 60 seconds
+traj_data, ground_truth = test_dataset.create_prediction_trajectory(t0_offset="6h", pred_len="1d") 
 traj = model.predict_autoregressive(traj_data)
 traj_sampled = model.predict_autoregressive(traj_data, samples=100)
 traj_quantiles = (
@@ -68,6 +70,8 @@ traj_quantiles = (
     ])
 )
 ```
+
+
 For full example see: [Example](examples/example.ipynb)
 
 
