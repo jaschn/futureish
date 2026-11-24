@@ -1,6 +1,6 @@
 [project]
 name = "futureish"
-version = "0.1.0"
+version = "0.1.2"
 description = "Uncertainty aware time series library with online update/training support."
 readme = "README.md"
 authors = [
