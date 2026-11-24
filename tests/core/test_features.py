@@ -234,3 +234,63 @@ def test_bucket_input_feature(input_len: str, scaler_factory: Optional[ScalerFac
     ]
     dataset = create_dataset(input_features=input_features)
     dataset_verify(dataset)
+
+@pytest.mark.parametrize(
+        "window_length",
+        [1, 2, 3, 4, 5, 6, 8]
+)
+@pytest.mark.parametrize(
+    "input_length",
+    [2, 3, 4, 5, 6]
+)
+def test_bucket_input_feature_impl(window_length: int, input_length: int):
+    import numpy as np
+    dp = RecordedDataPoint("value_a", step_size="1m")
+    input_features: list[InputFeatureBase] = [
+        BucketInputFeature(
+            base_datapoint=dp,
+            feature_name="input_feature",
+            input_length=f"{input_length - 1}m", # 9m history + t0 = 10 datapoints
+            group_by_window=f"{window_length}m",
+            agg_expr=lambda expr, feature_time: expr.len(),
+        ),
+    ]
+    xf_shape = input_length // window_length
+    expected_lens = [window_length] * (input_length // window_length)
+    if input_length % window_length > 0:
+        xf_shape += 1
+        expected_lens += [input_length % window_length]
+    expected_lens = np.array(expected_lens)
+    dataset = create_dataset(input_features=input_features)
+    dataset_verify(dataset)
+    X = dataset.to_train_dataset().create_training_data().get_column("X").to_numpy()
+    assert X.shape[1] == xf_shape, f"Expected {xf_shape} features, found {X.shape[1]}"
+    assert (X == expected_lens).all()
+
+@pytest.mark.parametrize(
+        "window_length",
+        [1, 2, 3, 4, 5, 6, 8]
+)
+@pytest.mark.parametrize(
+    "input_length",
+    [2, 3, 4, 5, 6]
+)
+def test_bucket_input_feature_impl2(window_length: int, input_length: int):
+    import numpy as np
+    dp = RecordedDataPoint("value_a", step_size="1m")
+    input_features: list[InputFeatureBase] = [
+        BucketInputFeature(
+            base_datapoint=dp,
+            feature_name="input_feature",
+            input_length=f"{input_length - 1}m", # 9m history + t0 = 10 datapoints
+            group_by_window=f"{window_length}m",
+            agg_expr=lambda expr, feature_time: expr.max(),
+        ),
+    ]
+    dataset = create_dataset(input_features=input_features)
+    dataset_verify(dataset)
+    X = dataset.to_train_dataset().create_training_data().get_column("X").to_numpy()
+    for i in range(X.shape[0]):
+        XX = X[i]
+        for ii in range(XX.shape[0]-1):
+            assert XX[ii] > XX[ii+1], f"Expected all values to be equal, but found {XX[ii]} <= {XX[ii+1]}"
