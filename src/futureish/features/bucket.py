@@ -61,26 +61,24 @@ class BucketInputFeature(ModularInputFeature):
                     bounds[i + 1].offset_column_backward(pl.col("t0")),
                     bounds[i].offset_column_backward(pl.col("t0")),
                     closed="right"
-                )
+                ).cast(pl.Int8)
         )
 
         x1 = (
             x
             .with_columns(
-                pl.max_horizontal([  
+                pl.sum_horizontal([  
                     (
-                        pl.lit(0) + (pl.lit(i) + 1) * get_mask(i).cast(pl.Int8) - 1
+                        pl.lit(i) * get_mask(i) # mask is 1 if the feature_time is in the bucket i, otherwise 0
                     )
                     for i in range(len(bounds) - 1)
                 ]).alias("window_index"),
-            )
-            .with_columns(
-                pl.when(pl.col("window_index") >= 0).then(pl.col("window_index"))
             )
         )
 
         x2 = (
             x1
+            .sort(feature_time)
             .group_by(grouped + ["window_index"])
             .agg(
                 pl.col(feature)
