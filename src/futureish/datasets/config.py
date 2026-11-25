@@ -2,7 +2,7 @@ import copy
 from typing import Any, Optional, Sequence, TypeVar, Union
 
 from ..datapoints.recorded import RecordedDataPoint
-from ..utils.timedelta import TimeDeltaOperator
+from ..utils.timedeltaoperator import TimeDeltaOperator
 
 from ..features.recorded_base import RecordedInputFeatureBase
 

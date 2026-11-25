@@ -1,4 +1,4 @@
-from ..utils.timedelta import TimeDeltaOperator
+from ..utils.timedeltaoperator import TimeDeltaOperator
 
 from ..datapoints.recorded import RecordedDataPoint
 from .recorded_base import RecordedInputFeatureBase
@@ -27,30 +27,19 @@ class RecordedInputFeature(RecordedInputFeatureBase):
 		super().__init__(base_datapoint, feature_name, input_length, uses_future_data, scaler_factory=scaler_factory, debug=debug)
 
 	def _generate_sub_feature_names(self) -> list[str]:
-		dtype = self._time_column_dtype if self._time_column_dtype is not None else pl.Datetime
-		end = TimeDeltaOperator() if not self.uses_future_data else self.base_datapoint.step_size
-		names = (
-			pl.DataFrame()
-			.select(
-				self.input_length.offset_column_backward(pl.lit(0).cast(dtype)).alias("start"),
-				end.offset_column_forward(pl.lit(0).cast(dtype)).alias("end")
-			)
-			.select(
-				pl.lit(self.feature_name + "[") + (        
-					pl.datetime_range(      
-							pl.col("start").first(),
-							pl.col("end").first(),
-							interval=self.base_datapoint.step_size.to_string(),
-							closed="both"
-						) - pl.lit(0).cast(dtype)
-				).dt.to_string()
-				+ pl.lit("]")
-			)
-			.to_series().to_list()
-		)
+		if self.uses_future_data:
+			r = TimeDeltaOperator.range(self.input_length.negated(), self.base_datapoint.step_size, self.base_datapoint.step_size)
+		else:
+			r = TimeDeltaOperator.range(self.input_length.negated(), TimeDeltaOperator(), self.base_datapoint.step_size)
+
+		names = [
+			self.feature_name + "[" + str(td.to_string()) + "]" for td in r
+		]
+
 		return names
 
 	def _create_features(self, dataframe: FrameT, grouped: list[str]) -> FrameT:
+		dataframe = dataframe.sort(TIME_CL)
 		if self.input_length.is_zero():
 			grouper = dataframe.group_by("time", *grouped)
 		else:

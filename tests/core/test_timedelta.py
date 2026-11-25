@@ -1,4 +1,5 @@
-from futureish.utils.timedelta import TimeDelta, TimeDeltaOperator
+from futureish.utils.timedeltaoperator import TimeDeltaOperator
+from futureish.utils.timedelta import TimeDelta
 import pytest
 
 base_time_units = ["ns", "us", "ms", "s", "m", "h", "d", "w", "mo", "q", "y"]

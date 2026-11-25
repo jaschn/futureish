@@ -5,7 +5,7 @@ from typing import Any, Literal, Optional, Sequence, TypeAlias, TypeVar, Union, 
 import numpy as np
 import polars as pl
 
-from ..utils.timedelta import TimeDeltaOperator
+from .timedeltaoperator import TimeDeltaOperator
 
 from ..datapoints.base import DataPoint
 from ..datapoints.time import TimeDataPoint

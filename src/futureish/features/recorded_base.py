@@ -1,4 +1,4 @@
-from ..utils.timedelta import TimeDeltaOperator
+from ..utils.timedeltaoperator import TimeDeltaOperator
 
 from ..datapoints.recorded import RecordedDataPoint
 from .input_base import InputFeatureBase

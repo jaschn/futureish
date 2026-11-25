@@ -1,4 +1,4 @@
-from ..utils.timedelta import TimeDeltaOperator
+from ..utils.timedeltaoperator import TimeDeltaOperator
 
 from .config import DataConfig
 from .._internal.constants import CONTIGUOUS_GROUP, TIME_CL

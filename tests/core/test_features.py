@@ -294,3 +294,17 @@ def test_bucket_input_feature_impl2(window_length: int, input_length: int):
         XX = X[i]
         for ii in range(XX.shape[0]-1):
             assert XX[ii] > XX[ii+1], f"Expected all values to be equal, but found {XX[ii]} <= {XX[ii+1]}"
+
+def test_recorded_input_feature_sub_names():
+    dp = RecordedDataPoint("value_a", step_size="1m")
+    input_features: list[InputFeatureBase] = [
+        RecordedInputFeature(dp, feature_name="input_feature", input_length="5m"),
+    ]
+    dataset = create_dataset(input_features=input_features)
+    train_dataset = dataset.to_train_dataset()
+    train_data = train_dataset.create_training_data()
+    assert train_dataset.config.sub_features_names is not None, "Sub features names should not be None"
+    assert len(train_dataset.config.sub_features_names) == train_data.select(pl.col("X").first().arr.len()).item()
+    for f in train_dataset.config.sub_features_names:
+        assert f.startswith("input_feature["), f"Sub feature name {f} does not start with 'input_feature'"
+        assert f.endswith("]"), f"Sub feature name {f} does not end with ']'"
