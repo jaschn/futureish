@@ -1,3 +1,5 @@
+from ..utils.timedeltaoperator import TimeDeltaOperator
+
 from ..datapoints.recorded import RecordedDataPoint
 from .recorded_base import RecordedInputFeatureBase
 
@@ -33,36 +35,17 @@ class SparseInputFeature(RecordedInputFeatureBase):
 		return super()._repr_fields | new_fields
 
 	def _generate_sub_feature_names(self) -> list[str]:
-		names = (
-			pl.DataFrame()
-			.select(
-				self.input_length.offset_column_backward(pl.lit(0).cast(self.time_column_dtype)).alias("start"),
-				pl.lit(0).cast(self.time_column_dtype).alias("end")
-			)
-		)
-		data_range = [
-			pl.datetime_range(      
-				pl.col("start").first(),
-				pl.col("end").first(),
-				interval=self.base_datapoint.step_size.to_string(),
-				closed="both",
-			).reverse().gather_every(self.reduction_factor).reverse()
-		]
+		r = TimeDeltaOperator.range(self.input_length.negated(), TimeDeltaOperator(), self.base_datapoint.step_size)
+		r.reverse()
+		r = r[::self.reduction_factor]
+		r.reverse()
+
 		if self.uses_future_data:
-			data_range.append(
-				pl.lit(0).cast(self.time_column_dtype).dt.offset_by(self.base_datapoint.step_size.to_string())
-			)
-		names = (
-			names
-			.select(
-				pl.lit(self.feature_name + "[") + (        
-					pl.concat(data_range)
-					- pl.lit(0).cast(self.time_column_dtype)
-				).dt.to_string()
-				+ pl.lit("]")
-			)
-			.to_series().to_list()
-		)
+			r.append(self.base_datapoint.step_size)
+
+		names = [
+			self.feature_name + "[" + str(td.to_string()) + "]" for td in r
+		]
 
 		return names
 

@@ -6,7 +6,7 @@ from typing import Optional, Union
 import polars as pl
 import re
 
-from .._internal.constants import TIME_CL
+from ..utils.time_utils import parse_timedelta
 
 @total_ordering
 @dataclass
@@ -59,6 +59,8 @@ class TimeDelta:
             self.q = self.q % 4
         # can't upcast hours to days, because days are a calander day which can be 23, 24 or 25 hours depending on daylight savings time
         # same for the rest of the units
+        if self.negative and self.is_zero():
+            self.negative = False
 
     def is_ambiguous(self) -> bool:
         if self.h >= 23:
@@ -202,8 +204,71 @@ class TimeDelta:
                 q=self.q + other.q,
                 y=self.y + other.y,
             )
+        elif self.negative and not other.negative:
+            if self.positive() > other:
+                return TimeDelta(
+                    negative=True,
+                    ns=self.ns - other.ns,
+                    us=self.us - other.us,
+                    ms=self.ms - other.ms,
+                    s=self.s - other.s,
+                    m=self.m - other.m,
+                    h=self.h - other.h,
+                    d=self.d - other.d,
+                    w=self.w - other.w,
+                    mo=self.mo - other.mo,
+                    q=self.q - other.q,
+                    y=self.y - other.y,
+                )
+            else:
+                return TimeDelta(
+                    negative=False,
+                    ns=other.ns - self.ns,
+                    us=other.us - self.us,
+                    ms=other.ms - self.ms,
+                    s=other.s - self.s,
+                    m=other.m - self.m,
+                    h=other.h - self.h,
+                    d=other.d - self.d,
+                    w=other.w - self.w,
+                    mo=other.mo - self.mo,
+                    q=other.q - self.q,
+                    y=other.y - self.y,
+                )
         else:
             return NotImplemented
+
+    def negated(self) -> "TimeDelta":
+        return TimeDelta(
+            negative=True,
+            ns=self.ns,
+            us=self.us,
+            ms=self.ms,
+            s=self.s,
+            m=self.m,
+            h=self.h,
+            d=self.d,
+            w=self.w,
+            mo=self.mo,
+            q=self.q,
+            y=self.y,
+        )
+
+    def positive(self) -> "TimeDelta":
+        return TimeDelta(
+            negative=False,
+            ns=self.ns,
+            us=self.us,
+            ms=self.ms,
+            s=self.s,
+            m=self.m,
+            h=self.h,
+            d=self.d,
+            w=self.w,
+            mo=self.mo,
+            q=self.q,
+            y=self.y,
+        )
 
     def is_multiple_of(self, other: "TimeDelta") -> bool:
         if self.is_zero() != other.is_zero():
@@ -222,151 +287,3 @@ class TimeDelta:
                 return False
         return True
         
-def parse_timedelta_str(delta: str) -> TimeDelta:
-    negative = False
-    if delta.startswith("-"):
-        negative = True
-        delta = delta[1:]
-    elif delta.startswith("+"):
-        delta = delta[1:]
-
-    pattern = re.compile(r"(?P<value>\d+)(?P<unit>ns|us|ms|s|m|h|d|w|mo|q|y)(?![a-z])")
-    matches = pattern.findall(delta)
-
-    td = TimeDelta(negative=negative)
-    ns = 0
-    us = 0
-    ms = 0
-    s = 0
-    m = 0
-    h = 0
-    d = 0
-    w = 0
-    mo = 0
-    q = 0
-    y = 0
-    for value, unit in matches:
-        value = int(value)
-        match unit:
-            case "ns":
-                ns += value
-            case "us":
-                us += value
-            case "ms":
-                ms += value
-            case "s":
-                s += value
-            case "m":
-                m += value
-            case "h":
-                h += value
-            case "d":
-                d += value
-            case "w":
-                w += value
-            case "mo":
-                mo += value
-            case "q":
-                q += value
-            case "y":
-                y += value
-
-    td = TimeDelta(ns=ns, us=us, ms=ms, s=s, m=m, h=h, d=d, w=w, mo=mo, q=q, y=y, negative=negative)
-
-    return td
-
-def parse_timedelta_timedelta(delta: timedelta) -> TimeDelta:
-    total_seconds = delta.total_seconds()
-    negative = total_seconds < 0
-    total_seconds = abs(total_seconds)
-
-    days = delta.days
-    seconds = delta.seconds
-    microseconds = delta.microseconds
-
-    td = TimeDelta(
-        d=days,
-        s=seconds,
-        ms=microseconds,
-        negative=negative
-    )
-
-    return td
-
-def parse_timedelta(delta: Optional[Union[str, timedelta, TimeDelta, "TimeDeltaOperator"]]) -> TimeDelta:
-    if delta is None:
-        return TimeDelta()
-    elif isinstance(delta, str):
-        if not _is_valid_polars_delta(delta):
-            raise ValueError(f"Invalid time delta: {delta}")
-        return parse_timedelta_str(delta)
-    elif isinstance(delta, timedelta):
-        return parse_timedelta_timedelta(delta)
-    elif isinstance(delta, TimeDelta):
-        return delta
-    elif isinstance(delta, TimeDeltaOperator):
-        return delta.td
-    else:
-        raise ValueError(f"Invalid time delta: {delta}")
-
-def _is_valid_polars_delta(delta: str) -> bool:
-    try:
-        pl.DataFrame().select(pl.lit(0).cast(pl.Datetime).dt.offset_by(delta))
-        return True
-    except Exception:
-        return False
-
-# custom class to include month as a native time delta unit, since python's timedelta does not support months
-@total_ordering
-class TimeDeltaOperator:
-    def __init__(self, delta: Optional[Union[str, timedelta, TimeDelta, "TimeDeltaOperator"]] = None):
-        self.orig_delta = delta
-        self.td = parse_timedelta(delta)
-
-    def to_string(self) -> str:
-        return self.td.to_string()
-
-    def __eq__(self, other: object) -> bool:
-        return self.td == other
-
-    def __lt__(self, other: object) -> bool:
-        return self.td < other
-
-    def __gt__(self, other: object) -> bool:
-        return self.td > other
-
-    def __str__(self) -> str:
-        return self.td.to_string()
-
-    def __repr__(self) -> str:
-        return self.td.to_string()
-
-    def __hash__(self) -> int:
-        return hash(self.td)
-
-    def __add__(self, other: "TimeDeltaOperator") -> "TimeDeltaOperator":
-        return TimeDeltaOperator(self.td + other.td)
-
-    def truncate_column(self, time_cl: pl.Expr) -> pl.Expr:
-        return time_cl.dt.truncate(self.td.to_string())
-
-    def offset_column_forward(self, time_cl: pl.Expr) -> pl.Expr:
-        return time_cl.dt.offset_by(self.td.to_string())
-
-    def offset_column_backward(self, time_cl: pl.Expr) -> pl.Expr:
-        return time_cl.dt.offset_by("-" + self.td.to_string())
-
-    def is_zero(self) -> bool:
-        return self.td.is_zero()
-
-    def is_multiple_of(self, other: "TimeDeltaOperator") -> bool:
-        return self.td.is_multiple_of(other.td)
-
-    def bounds_up_to(self: "TimeDeltaOperator", end: "TimeDeltaOperator") -> list["TimeDeltaOperator"]:
-        current_pos = self
-        range_td = [TimeDeltaOperator()]
-        while current_pos <= end:
-            range_td.append(current_pos)
-            current_pos = current_pos + self
-        range_td.append(current_pos)
-        return range_td

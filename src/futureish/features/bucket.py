@@ -1,6 +1,6 @@
 import warnings
 
-from futureish.utils.timedelta import TimeDeltaOperator
+from futureish.utils.timedeltaoperator import TimeDeltaOperator
 
 from ..datapoints.recorded import RecordedDataPoint
 from .modular import ModularInputFeature

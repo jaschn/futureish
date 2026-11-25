@@ -1,4 +1,6 @@
-from ..utils.timedelta import TimeDeltaOperator
+from .._internal.constants import TIME_CL
+
+from ..utils.timedeltaoperator import TimeDeltaOperator
 
 from ..datapoints.base import DataPoint
 
@@ -67,6 +69,7 @@ class InputFeatureBase(FeaturesBase):
 				self.feature_name
 			)
 			.drop_nulls(["time", self.feature_name] + grouped)
+			.sort(TIME_CL)
 		)
 		return limited
 	

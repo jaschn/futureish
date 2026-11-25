@@ -46,12 +46,12 @@ class ModularInputFeature(RecordedInputFeatureBase):
         features = (
             dataframe
             .rolling(TIME_CL, period=self.input_length.to_string(), closed="both", group_by=grouped)
+            .having(pl.col("t0").last().is_not_null())
             .agg(
                 pl.col("t0").last(),
                 pl.col("time").alias("feature_time"),
                 pl.col(self.feature_name)
             )
-            .filter(pl.col("t0").is_not_null())
             .explode(["feature_time", self.feature_name], empty_as_null=True)
             .drop("time")
         )
@@ -74,7 +74,7 @@ class ModularInputFeature(RecordedInputFeatureBase):
 
         if self._sub_feature_names is None:
             sub_names: list[str] = []
-            features_only = features.drop("t0").drop(grouped)
+            features_only = features.drop("t0", *grouped, strict=False)
             cols = frame_columns(features_only)
             for c in cols:   
                 col_len = eager_item(features_only, pl.col(c).first().explode(empty_as_null=True).len())

@@ -1,4 +1,4 @@
-from ..utils.timedelta import TimeDeltaOperator
+from ..utils.timedeltaoperator import TimeDeltaOperator
 
 from .config import DataConfig
 from .dataset import Dataset
