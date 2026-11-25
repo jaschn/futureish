@@ -1,4 +1,4 @@
-from futureish.utils.timedelta import TimeDeltaOperator
+from futureish.utils.timedelta import TimeDelta, TimeDeltaOperator
 import pytest
 
 base_time_units = ["ns", "us", "ms", "s", "m", "h", "d", "w", "mo", "q", "y"]
@@ -24,6 +24,12 @@ def test_parse_timedelta(delta: str):
 def test_parse_timedelta_invalid():
     with pytest.raises(ValueError):
         TimeDeltaOperator("invalid")
+
+def test_less_than_or_equal():
+    assert TimeDelta(1) <= TimeDelta(1)
+    assert TimeDelta(1) <= TimeDelta(2)
+    assert TimeDeltaOperator("1s") <= TimeDeltaOperator("1s")
+    assert TimeDeltaOperator("1s") <= TimeDeltaOperator("2s")
 
 @pytest.mark.parametrize(
     "value, unit, next_unit",

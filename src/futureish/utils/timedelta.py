@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import timedelta
+from functools import total_ordering
 from typing import Optional, Union
 
 import polars as pl
@@ -7,7 +8,8 @@ import re
 
 from .._internal.constants import TIME_CL
 
-@dataclass(frozen=True)
+@total_ordering
+@dataclass
 class TimeDelta:
     ns: int = 0
     us: int = 0
@@ -21,6 +23,61 @@ class TimeDelta:
     q: int = 0
     y: int = 0
     negative: bool = False
+
+    def __hash__(self):
+        return hash(
+            (self.ns, self.us, self.ms, self.s, self.m, self.h, self.d, self.w, self.mo, self.q, self.y, self.negative)
+        )
+
+    def __post_init__(self):
+        self.normalize()
+
+    def normalize(self):
+        if self.ns >= 1_000:
+            self.us += self.ns // 1_000
+            self.ns = self.ns % 1_000
+        if self.us >= 1_000:
+            self.ms += self.us // 1_000
+            self.us = self.us % 1_000
+        if self.ms >= 1_000:
+            self.s += self.ms // 1_000
+            self.ms = self.ms % 1_000
+        if self.s >= 60:
+            self.m += self.s // 60
+            self.s = self.s % 60
+        if self.m >= 60:
+            self.h += self.m // 60
+            self.m = self.m % 60
+        if self.d >= 7:
+            self.w += self.d // 7
+            self.d = self.d % 7
+        if self.mo >= 3:
+            self.q += self.mo // 3
+            self.mo = self.mo % 3
+        if self.q >= 4:
+            self.y += self.q // 4
+            self.q = self.q % 4
+        # can't upcast hours to days, because days are a calander day which can be 23, 24 or 25 hours depending on daylight savings time
+        # same for the rest of the units
+
+    def is_ambiguous(self) -> bool:
+        if self.h >= 23:
+            if (
+                self.d != 0 or 
+                (self.h > 24 * 7 - 1 and self.w != 0) or
+                (self.h > 24 * 28 - 1 and self.mo != 0) or
+                (self.h > 24 * 3 * 30 - 1 and self.q != 0) or
+                (self.h > 24 * 12 * 30 - 1 and self.y != 0)
+            ):
+                return True
+        if self.w >= 4:
+            if (
+                self.mo != 0 or 
+                (self.w > 7 * 30 - 1 and self.q != 0) or
+                (self.w > 4 * 12 - 1 and self.y != 0)
+            ):
+                return True
+        return False
 
     def to_string(self) -> str:
         parts = []
@@ -50,6 +107,8 @@ class TimeDelta:
             parts.append(f"{self.y}y")
 
         result = "".join(parts)
+        if len(result) == 0:
+            return "0s"
         return result
 
     def is_zero(self) -> bool:
@@ -106,6 +165,45 @@ class TimeDelta:
         if not isinstance(other, TimeDelta):
             return NotImplemented
         return self._compare(other) == 0
+
+    def __mul__(self, other: int) -> "TimeDelta":
+        if not isinstance(other, int):
+            return NotImplemented
+        return TimeDelta(
+            negative=self.negative,
+            ns=self.ns * other,
+            us=self.us * other,
+            ms=self.ms * other,
+            s=self.s * other,
+            m=self.m * other,
+            h=self.h * other,
+            d=self.d * other,
+            w=self.w * other,
+            mo=self.mo * other,
+            q=self.q * other,
+            y=self.y * other,
+        )
+
+    def __add__(self, other: "TimeDelta") -> "TimeDelta":
+        if not isinstance(other, TimeDelta):
+            return NotImplemented
+        if self.negative == other.negative:
+            return TimeDelta(
+                negative=self.negative,
+                ns=self.ns + other.ns,
+                us=self.us + other.us,
+                ms=self.ms + other.ms,
+                s=self.s + other.s,
+                m=self.m + other.m,
+                h=self.h + other.h,
+                d=self.d + other.d,
+                w=self.w + other.w,
+                mo=self.mo + other.mo,
+                q=self.q + other.q,
+                y=self.y + other.y,
+            )
+        else:
+            return NotImplemented
 
     def is_multiple_of(self, other: "TimeDelta") -> bool:
         if self.is_zero() != other.is_zero():
@@ -173,30 +271,6 @@ def parse_timedelta_str(delta: str) -> TimeDelta:
             case "y":
                 y += value
 
-    if ns >= 1_000:
-        us += ns // 1_000
-        ns = ns % 1_000
-    if us >= 1_000:
-        ms += us // 1_000
-        us = us % 1_000
-    if ms >= 1_000:
-        s += ms // 1_000
-        ms = ms % 1_000
-    if s >= 60:
-        m += s // 60
-        s = s % 60
-    if m >= 60:
-        h += m // 60
-        m = m % 60
-    if mo >= 3:
-        q += mo // 3
-        mo = mo % 3
-    if q >= 4:
-        y += q // 4
-        q = q % 4
-    # can't upcast hours to days, because days are a calander day which can be 23, 24 or 25 hours depending on daylight savings time
-    # same for the rest of the units
-
     td = TimeDelta(ns=ns, us=us, ms=ms, s=s, m=m, h=h, d=d, w=w, mo=mo, q=q, y=y, negative=negative)
 
     return td
@@ -243,6 +317,7 @@ def _is_valid_polars_delta(delta: str) -> bool:
         return False
 
 # custom class to include month as a native time delta unit, since python's timedelta does not support months
+@total_ordering
 class TimeDeltaOperator:
     def __init__(self, delta: Optional[Union[str, timedelta, TimeDelta, "TimeDeltaOperator"]] = None):
         self.orig_delta = delta
@@ -269,6 +344,9 @@ class TimeDeltaOperator:
     def __hash__(self) -> int:
         return hash(self.td)
 
+    def __add__(self, other: "TimeDeltaOperator") -> "TimeDeltaOperator":
+        return TimeDeltaOperator(self.td + other.td)
+
     def truncate_column(self, time_cl: pl.Expr) -> pl.Expr:
         return time_cl.dt.truncate(self.td.to_string())
 
@@ -283,3 +361,12 @@ class TimeDeltaOperator:
 
     def is_multiple_of(self, other: "TimeDeltaOperator") -> bool:
         return self.td.is_multiple_of(other.td)
+
+    def bounds_up_to(self: "TimeDeltaOperator", end: "TimeDeltaOperator") -> list["TimeDeltaOperator"]:
+        current_pos = self
+        range_td = [TimeDeltaOperator()]
+        while current_pos <= end:
+            range_td.append(current_pos)
+            current_pos = current_pos + self
+        range_td.append(current_pos)
+        return range_td
