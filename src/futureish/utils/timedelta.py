@@ -8,6 +8,20 @@ import re
 
 from ..utils.time_utils import parse_timedelta
 
+UNIT_MAPPING = {
+    "ns": {"bigger": ("us", 1_000), "smaller": None},
+    "us": {"bigger": ("ms", 1_000), "smaller": ("ns", 1_000)},
+    "ms": {"bigger": ("s", 1_000), "smaller": ("us", 1_000)},
+    "s": {"bigger": ("m", 60), "smaller": ("ms", 1_000)},
+    "m": {"bigger": ("h", 60), "smaller": ("s", 60)},
+    "h": {"bigger": None, "smaller": ("m", 60)},
+    "d": {"bigger": ("w", 7), "smaller": None}, # can be 23, 24 or 25 hours depending on daylight savings time
+    "w": {"bigger": None, "smaller": ("d", 7)},
+    "mo": {"bigger": ("q", 3), "smaller": None}, # can be 28, 29, 30 or 31 days depending on the month
+    "q": {"bigger": ("y", 4), "smaller": (3, "mo")},
+    "y": {"bigger": None, "smaller": (12, "mo")},
+}
+
 @total_ordering
 @dataclass
 class TimeDelta:
@@ -24,6 +38,9 @@ class TimeDelta:
     y: int = 0
     negative: bool = False
 
+    def _time_units(self):
+        return [k for k in self.__dict__.keys() if k != "negative"]
+
     def __hash__(self):
         return hash(
             (self.ns, self.us, self.ms, self.s, self.m, self.h, self.d, self.w, self.mo, self.q, self.y, self.negative)
@@ -32,33 +49,40 @@ class TimeDelta:
     def __post_init__(self):
         self.normalize()
 
+    def _borrow_from_higher_unit(self, unit: str):
+        m = UNIT_MAPPING[unit]["bigger"]
+        if m is None:
+            raise ValueError(f"Cannot borrow from higher unit for {unit}")
+        u, multiplier = m
+        if getattr(self, u) <= 0:
+            self._borrow_from_higher_unit(u) # go to a higher unit to borrow until the higher unit can't be converted to the lower unit anymore
+        if getattr(self, u) > 0:
+            setattr(self, u, getattr(self, u) - 1)
+            setattr(self, unit, getattr(self, unit) + multiplier)
+        else:
+            raise ValueError(f"Cannot borrow from higher unit for {unit}")
+
+    def _normalize_to_bigger_unit(self, unit: str):
+        m = UNIT_MAPPING[unit]["bigger"]
+        if m is None:
+            return
+        u, multiplier = m
+        if getattr(self, unit) >= multiplier:
+            setattr(self, u, getattr(self, u) + getattr(self, unit) // multiplier)
+            setattr(self, unit, getattr(self, unit) % multiplier)
+
     def normalize(self):
-        if self.ns >= 1_000:
-            self.us += self.ns // 1_000
-            self.ns = self.ns % 1_000
-        if self.us >= 1_000:
-            self.ms += self.us // 1_000
-            self.us = self.us % 1_000
-        if self.ms >= 1_000:
-            self.s += self.ms // 1_000
-            self.ms = self.ms % 1_000
-        if self.s >= 60:
-            self.m += self.s // 60
-            self.s = self.s % 60
-        if self.m >= 60:
-            self.h += self.m // 60
-            self.m = self.m % 60
-        if self.d >= 7:
-            self.w += self.d // 7
-            self.d = self.d % 7
-        if self.mo >= 3:
-            self.q += self.mo // 3
-            self.mo = self.mo % 3
-        if self.q >= 4:
-            self.y += self.q // 4
-            self.q = self.q % 4
-        # can't upcast hours to days, because days are a calander day which can be 23, 24 or 25 hours depending on daylight savings time
-        # same for the rest of the units
+        # Borrow from higher units if any unit is negative
+        for unit in self._time_units():
+            if getattr(self, unit) < 0:
+                self._borrow_from_higher_unit(unit)
+
+        for unit in self._time_units():
+            self._normalize_to_bigger_unit(unit)
+
+        if any(getattr(self, unit) < 0 for unit in self._time_units()):
+            raise ValueError("TimeDelta units must be non-negative integers")
+
         if self.negative and self.is_zero():
             self.negative = False
 
