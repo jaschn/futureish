@@ -36,4 +36,4 @@ jobs:
         run: uv pip list
 
       - name: Run tests
-        run: uv run --no-sync pytest -n auto --import-mode=importlib -m "not slow" -p "no:dash"
+        run: uv run --no-sync pytest -x -n auto --import-mode=importlib -m "not slow" -p "no:dash"

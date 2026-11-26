@@ -23,8 +23,6 @@ required-markers = [
 
 [manifest]
 constraints = [
-    { name = "catboost", marker = "python_full_version >= '3.12'", specifier = ">=1.2.10" },
-    { name = "numpy", marker = "python_full_version == '3.12.*'", specifier = ">=1.26.0" },
     { name = "numpy", marker = "python_full_version == '3.13.*'", specifier = ">=2.1.0" },
     { name = "numpy", marker = "python_full_version >= '3.14'", specifier = ">=2.3.3" },
     { name = "pandas", marker = "python_full_version == '3.12.*'", specifier = ">=2.2.0" },
@@ -767,10 +765,10 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "catboost", specifier = ">=1.2" },
+    { name = "catboost", specifier = ">=1.2.10" },
     { name = "gpytorch", specifier = ">=1.12.0" },
     { name = "linear-operator", specifier = ">=0.6.1" },
-    { name = "numpy", specifier = ">=1.24" },
+    { name = "numpy", specifier = ">=2.0.2" },
     { name = "polars", specifier = ">=2.0.0" },
     { name = "torch", specifier = ">=2.3.0" },
     { name = "tqdm", specifier = ">=4.30.0" },

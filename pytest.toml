@@ -1,5 +1,5 @@
 [pytest]
-addopts = ["-n", "auto", "--import-mode=importlib", "-m not slow", "-p no:dash"]
+addopts = ["-x", "-n", "auto", "--import-mode=importlib", "-m not slow", "-p no:dash"]
 filterwarnings = [
     "error",
     "ignore:distutils Version classes are deprecated:DeprecationWarning",
