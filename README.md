@@ -1,8 +1,10 @@
 # futureish
 
-`futureish` is a Python time-series forecasting library built to create probabilistic time series models with online update of models.
-Its main feature is a online gaussian process model, but also features a Catboost model and allows easy implementation of other black-box models.
-It features a powerfull interface and functions for defining inputs, targets and datasets
+`futureish` is a Python time-series forecasting library for building probabilistic
+time-series models that can be updated online. Its main feature is an online
+Gaussian process model; it also includes a CatBoost model and makes it easy to
+integrate other black-box models. It provides a powerful interface for defining
+inputs, targets, and datasets.
 
 - Recorded, sparse, modular, calendar, cyclical, and bucketed input features
 - Target features and configurable data preparation
@@ -11,7 +13,11 @@ It features a powerfull interface and functions for defining inputs, targets and
 - GPyTorch Gaussian-process backends, including sparse and online PEP models
 - CatBoost backend
 
-![\[\](https://raw.githubusercontent.com/jaschn/futureish/main/examples/prediction_example.png)](https://raw.githubusercontent.com/jaschn/futureish/main/examples/prediction_example.png)
+![Taxi passenger forecast showing observed values, the predicted median, and an 80% prediction interval.](https://raw.githubusercontent.com/jaschn/futureish/main/examples/prediction_example.png)
+
+The plot shows an autoregressive taxi-passenger forecast: the orange line is the
+median of 100 sampled predictions, and the shaded band spans the 10th to 90th
+percentiles (an 80% prediction interval). The red line marks the forecast start.
 
 ## Installation
 
@@ -25,21 +31,31 @@ uv add futureish
 
 ## Quick start
 
-The following example creates a one-minute dataset, derives a lagged input
-feature, and prepares training data:
+This example downloads a small slice of a public taxi-passenger dataset,
+prepares lagged inputs, trains a probabilistic model, and calculates an
+80% prediction interval:
 
 ```python
+import polars as pl
+import torch
+
 from futureish.datapoints import RecordedDataPoint
-from futureish.features import RecordedInputFeature, BusinessDayFeature, SinCosTimeFeature
+from futureish.features import RecordedInputFeature, TargetFeature
 from futureish.scaling import DiffScaler, ZScoreScaler, ChainedScaler
-from futureish.features import TargetFeature
 from futureish.datasets import Dataset
 from futureish.gpr import GPyTorchOnlinePEP, GPyTorchFitConfig
 from futureish.forecasting import Forecaster
-import torch
 
-pas_dp = RecordedDataPoint(name="pas", step_size="30m", known_future=False) 
+data = (
+    pl.read_csv(
+        "https://github.com/unit8co/darts/raw/refs/heads/master/datasets/taxi_new_york_passengers.csv",
+        try_parse_dates=True,
+    )
+    .rename({"#Passengers": "pas"})
+    .head(2000)
+)
 
+pas_dp = RecordedDataPoint(name="pas", step_size="30m", known_future=False)
 input_features = [
     RecordedInputFeature(pas_dp, feature_name="pas_lags", input_length="2h", scaler_factory=ChainedScaler.from_scalers(DiffScaler, ZScoreScaler)),
 ]
@@ -57,7 +73,7 @@ train_dataset, test_dataset = dataset.split_training_and_test_data(0.8)
 
 model = Forecaster(GPyTorchOnlinePEP.wrapped(100, use_cuda=torch.cuda.is_available()))
 model.fit(train_dataset, config=GPyTorchFitConfig(time_limit=60)) # train for 60 seconds
-traj_data, ground_truth = test_dataset.create_prediction_trajectory(t0_offset="6h", pred_len="1d") 
+traj_data, ground_truth = test_dataset.create_prediction_trajectory(t0_offset="6h", pred_len="1d")
 traj = model.predict_autoregressive(traj_data)
 traj_sampled = model.predict_autoregressive(traj_data, samples=100)
 traj_quantiles = (
@@ -66,7 +82,7 @@ traj_quantiles = (
     .agg([
         pl.col("pas").quantile(0.1).alias("pas_10th_percentile"),
         pl.col("pas").quantile(0.5).alias("pas_median"),
-        pl.col("pas").quantile(0.9).alias("pas_90th_percentile")
+        pl.col("pas").quantile(0.9).alias("pas_90th_percentile"),
     ])
 )
 ```
@@ -96,7 +112,8 @@ from futureish.features import *
 ```
 #### RecordedInputFeature
 A basic input feature that includes the current value of the datapoint and optionally lags as defined in `input_length` and $t_1$ if `uses_future_data=True`.
-`input_lenght` defines the lags, `None` results in only $t_0$ and a value defines how much in the past is included.
+`input_length` defines the lags: `None` results in only $t_0$, while a value
+defines how much of the past is included.
 
 #### SparseInputFeature
 Some functionality, but only uses every nth lag as defined in reduction factor. For example `reduction_factor=2` uses lags $t_0, t_{-2}, ...$
@@ -111,7 +128,8 @@ Creates buckets for the lags, that each can be modified or aggregated by a custo
 Cyclic time features for different time variable encoded with sin and cos
 
 #### BusinessDayFeature
-Creates a indicator if the current day is a business day or not. Can also include indications for previos days according the `day_history`
+Creates an indicator for whether the current day is a business day. Can also
+include indicators for previous days according to `day_history`.
 
 #### InputFeatureBase
 Base class to create custom features. At minimum a `_create_features` needs to be implemented. For more control `create_features` can be implemented.
@@ -149,7 +167,8 @@ validates and prepares the feature columns, fits scaling configuration on
 training data, and can produce `TrainDataset` and `TestDataset` instances.
 Specialized online, prediction, and forecasting datasets support incremental
 updates and autoregressive prediction workflows.
-The datasets are split to ensure seperation between training, test and prediction data.
+The datasets are split to ensure separation between training, test, and
+prediction data.
 
 The basic dataset can be split into train and test datasets with `split_training_and_test_data` or converted entirely to a training dataset with `to_train_dataset`
 Also has a `iter` and `random_subset` method.
@@ -158,7 +177,8 @@ Also has a `iter` and `random_subset` method.
 Can be passed on to the fit method to train the model.
 
 ##### OnlineDataset
-The same as the basic dataset, but specifiying the size of the first training step, which limits the amount of data that is available for fitting the scalers.
+The same as the basic dataset, but specifying the size of the first training
+step, which limits the amount of data available for fitting the scalers.
 
 #### OnlineTrainingDataset
 The training dataset for the `OnlineDataset`
