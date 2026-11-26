@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - name: Check out repository
@@ -46,5 +46,43 @@ jobs:
       - name: Build package distributions
         run: uv build
 
+      - name: Check package metadata
+        run: uvx twine check --strict dist/*
+
+      - name: Verify wheel installs and imports
+        run: |
+          uv venv --python 3.11 "$RUNNER_TEMP/venv-wheel"
+          uv pip install --python "$RUNNER_TEMP/venv-wheel/bin/python" dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/venv-wheel/bin/python" - <<'EOF'
+          import importlib.metadata as md
+          import os
+
+          import futureish
+          import futureish.datapoints, futureish.features, futureish.scaling
+          import futureish.datasets, futureish.gpr, futureish.forecasting
+
+          expected = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          installed = md.version("futureish")
+          assert installed == expected, f"installed {installed}, expected {expected}"
+          print("wheel OK:", installed)
+          EOF
+
+      - name: Verify sdist installs and imports
+        run: |
+          uv venv --python 3.11 "$RUNNER_TEMP/venv-sdist"
+          uv pip install --python "$RUNNER_TEMP/venv-sdist/bin/python" dist/*.tar.gz
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/venv-sdist/bin/python" -c "import futureish.forecasting, futureish.gpr; print('sdist OK')"
+
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "Release ${GITHUB_REF_NAME#v}" \
+            --generate-notes \
+            --verify-tag
