@@ -85,7 +85,6 @@ class SinCosTimeFeature(InputFeatureBase):
                 weekday=self.weekday,
                 month=self.month,
                 ordinal_day=self.ordinal_day,
-                year=False,
             )
         )
 

@@ -10,6 +10,8 @@ class ZScoreScaler(DataScaler):
 	def __init__(self, df: AnyFrame, raw_column_name: str, feature_column_name: str):
 		super().__init__(df, raw_column_name, feature_column_name)
 		self.mean, self.std = eager_row(df, self.raw_column.mean().alias("_mean"), self.raw_column.std().alias("_std"))
+		if self.std is None:
+			raise ValueError(f"Standard deviation of column '{self.raw_column_name}' is None, cannot scale data.")
 		if self.std == 0:
 			self.std = 1 # just remove the scaling effect if the std is zero
 		assert self.std != 0, f"Standard deviation of column '{self.raw_column_name}' is zero, cannot scale data."
