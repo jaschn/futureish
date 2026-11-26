@@ -7,7 +7,3 @@ try:
     __version__ = version("futureish")
 except PackageNotFoundError:
     __version__ = "0.0.0+unknown"
-
-import polars as pl
-
-pl.Config.set_engine_affinity("streaming")

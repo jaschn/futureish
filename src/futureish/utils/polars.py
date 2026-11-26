@@ -102,7 +102,8 @@ def add_cos_sin_features(df: FrameT, time_column: Optional[Union[pl.Expr, str]] 
 	weekday_float = (time_column.dt.weekday() + hour_float / 24.0)
 	month_float = (time_column.dt.month() + (time_column.dt.day() - 1) / time_column.dt.days_in_month() + hour_float / 24.0)
 	ordinal_day_float = (time_column.dt.ordinal_day() + hour_float / 24.0)
-	year_float = time_column.dt.year() + (ordinal_day_float - 1) / (365.0 + time_column.dt.is_leap_year().cast(pl.Float64)) 
+	days_in_year = 365.0 + time_column.dt.is_leap_year().cast(pl.Float64)
+	year_float = time_column.dt.year() + (ordinal_day_float - 1) / days_in_year
 	df_added = df
 
 	if second:
@@ -122,18 +123,18 @@ def add_cos_sin_features(df: FrameT, time_column: Optional[Union[pl.Expr, str]] 
 		)
 	if weekday:
 		df_added = df_added.with_columns(
-				_sin_transform(weekday_float, minimum=1, maximum=7).alias("weekday_sin"),
-				_cos_transform(weekday_float, minimum=1, maximum=7).alias("weekday_cos"),
+				_sin_transform(weekday_float, minimum=1, maximum=8).alias("weekday_sin"),
+				_cos_transform(weekday_float, minimum=1, maximum=8).alias("weekday_cos"),
 		)
 	if month:
 		df_added = df_added.with_columns(
-				_sin_transform(month_float, minimum=1, maximum=12).alias("month_sin"),
-				_cos_transform(month_float, minimum=1, maximum=12).alias("month_cos"),
+				_sin_transform(month_float, minimum=1, maximum=13).alias("month_sin"),
+				_cos_transform(month_float, minimum=1, maximum=13).alias("month_cos"),
 		)
 	if ordinal_day:
 		df_added = df_added.with_columns(
-				_sin_transform(ordinal_day_float, minimum=1, maximum=365).alias("ordinal_day_sin"),
-				_cos_transform(ordinal_day_float, minimum=1, maximum=365).alias("ordinal_day_cos"),
+				_sin_transform(ordinal_day_float, minimum=1, maximum=1 + days_in_year).alias("ordinal_day_sin"),
+				_cos_transform(ordinal_day_float, minimum=1, maximum=1 + days_in_year).alias("ordinal_day_cos"),
 		)
 	if year:
 		if year_minimum is None:
