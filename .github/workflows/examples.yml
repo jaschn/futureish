@@ -1,0 +1,59 @@
+name: Examples
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "examples/**"
+      - "src/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/examples.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "examples/**"
+      - "src/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/examples.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  notebooks:
+    name: Execute example notebooks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --locked --group examples
+
+      - name: Execute notebooks
+        run: |
+          mkdir -p "$RUNNER_TEMP/executed-notebooks"
+          while IFS= read -r -d '' notebook; do
+            output="$(printf '%s' "$notebook" | tr '/' '_')"
+            uv run --locked --group examples jupyter nbconvert \
+              --to notebook \
+              --execute \
+              --ExecutePreprocessor.timeout=900 \
+              --output-dir "$RUNNER_TEMP/executed-notebooks" \
+              --output "$output" \
+              "$notebook"
+          done < <(find examples -type f -name '*.ipynb' -print0)
