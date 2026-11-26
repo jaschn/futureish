@@ -89,7 +89,7 @@ def _sin_transform(col: Union[pl.Expr, str], minimum: Optional[Union[float, pl.E
 		maximum = col.max()
 	return (((col - minimum) / (maximum - minimum)) * np.pi * 2).sin()
 
-def add_cos_sin_features(df: FrameT, time_column: Optional[Union[pl.Expr, str]] = None, *, second: bool = True, minute: bool = True, hour: bool = True, weekday: bool = True, month: bool = True, ordinal_day: bool = True, year: bool = False, year_minimum: Optional[float] = None, year_maximum: Optional[float] = None) -> FrameT:
+def add_cos_sin_features(df: FrameT, time_column: Optional[Union[pl.Expr, str]] = None, *, second: bool = True, minute: bool = True, hour: bool = True, weekday: bool = True, month: bool = True, ordinal_day: bool = True) -> FrameT:
 
 	if time_column is None:
 		time_column = "time"
@@ -136,15 +136,7 @@ def add_cos_sin_features(df: FrameT, time_column: Optional[Union[pl.Expr, str]] 
 				_sin_transform(ordinal_day_float, minimum=1, maximum=1 + days_in_year).alias("ordinal_day_sin"),
 				_cos_transform(ordinal_day_float, minimum=1, maximum=1 + days_in_year).alias("ordinal_day_cos"),
 		)
-	if year:
-		if year_minimum is None:
-			raise ValueError("year_minimum must be provided when year=True")
-		if year_maximum is None:
-			raise ValueError("year_maximum must be provided when year=True")
-		df_added = df_added.with_columns(
-				_cos_transform(year_float, minimum=year_minimum, maximum=year_maximum).alias("year_cos"),
-				_sin_transform(year_float, minimum=year_minimum, maximum=year_maximum).alias("year_sin"),
-		)
+
 	return df_added
 
 def _create_contiguous_group_feature(df: FrameT, base_datapoint: DataPoint) -> FrameT:

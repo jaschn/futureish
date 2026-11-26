@@ -53,7 +53,7 @@ def test_add_cos_sin_features_matches_cyclic_formulas():
 		for time, day, year_length in zip(times, ordinal, days_in_year)
 	])
 
-	result = add_cos_sin_features(frame, year=True, year_minimum=year.min(), year_maximum=year.max())
+	result = add_cos_sin_features(frame)
 
 	def expected(values, minimum, maximum):
 		phase = (values - minimum) / (maximum - minimum) * 2 * np.pi
@@ -64,7 +64,6 @@ def test_add_cos_sin_features_matches_cyclic_formulas():
 		"weekday": expected(weekday, 1, 8),
 		"month": expected(month, 1, 13),
 		"ordinal_day": expected(ordinal, 1, 1 + days_in_year),
-		"year": expected(year, year.min(), year.max()),
 	}
 	for name, (expected_sin, expected_cos) in expected_features.items():
 		np.testing.assert_allclose(result[f"{name}_sin"].to_numpy(), expected_sin, rtol=1e-12, atol=1e-12)
