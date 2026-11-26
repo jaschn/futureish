@@ -48,6 +48,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/executed-notebooks"
           while IFS= read -r -d '' notebook; do
+            printf 'Checking notebook: %s\n' "$notebook"
             output="$(printf '%s' "$notebook" | tr '/' '_')"
             uv run --locked --group examples jupyter nbconvert \
               --to notebook \
