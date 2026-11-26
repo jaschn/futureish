@@ -11,7 +11,7 @@ It features a powerfull interface and functions for defining inputs, targets and
 - GPyTorch Gaussian-process backends, including sparse and online PEP models
 - CatBoost backend
 
-![\[\](examples/prediction_example.png)](examples/prediction_example.png)
+![\[\](https://raw.githubusercontent.com/jaschn/futureish/main/examples/prediction_example.png)](https://raw.githubusercontent.com/jaschn/futureish/main/examples/prediction_example.png)
 
 ## Installation
 

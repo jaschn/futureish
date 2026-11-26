@@ -6,24 +6,35 @@ readme = "README.md"
 authors = [
     { name = "Jakob Schneider", email = "git@jaschn.de" }
 ]
+license = "MIT"
 license-files = ["LICENSE"]
+keywords = ["time-series", "forecasting", "gaussian-process", "probabilistic", "online-learning", "uncertainty", "gpytorch", "catboost"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
 
 requires-python = ">=3.11"
 dependencies = [
     "catboost>=1.2.10",
-    "numpy>=2.4.6",
-    "polars>=2.2.0",
-    "tqdm>=4.70.1",
-    "gpytorch>=1.15.2",
-    "linear-operator",
-    "torch>=2.14.1",
+    "numpy>=2.0.2",
+    "polars>=2.0.0",
+    "tqdm>=4.30.0",
+    "gpytorch>=1.12.0",
+    "torch>=2.3.0",
+    "linear-operator>=0.6.1",
 ]
 
-environments = [
-    "sys_platform == 'linux'",
-    "sys_platform == 'darwin'",
-    "sys_platform == 'win32'",
-]
+[project.urls]
+Homepage = "https://github.com/jaschn/futureish"
+Repository = "https://github.com/jaschn/futureish"
+Issues = "https://github.com/jaschn/futureish/issues"
+Changelog = "https://github.com/jaschn/futureish/releases"
 
 [build-system]
 requires = ["uv_build>=0.11.21,<0.13.0"]
@@ -35,9 +46,12 @@ required-environments = [
     "sys_platform == 'darwin'",
     "sys_platform == 'win32'",
 ]
-
-default-groups = [
-
+constraint-dependencies = [
+    "numpy>=2.1.0 ; python_full_version >= '3.13' and python_full_version < '3.14'",
+    "numpy>=2.3.3 ; python_full_version >= '3.14'",
+    "pandas>=2.2.0 ; python_full_version >= '3.12' and python_full_version < '3.13'",
+    "pandas>=2.2.3 ; python_full_version >= '3.13' and python_full_version < '3.14'",
+    "pandas>=2.3.3 ; python_full_version >= '3.14'",
 ]
 
 [dependency-groups]
