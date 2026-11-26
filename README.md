@@ -96,6 +96,7 @@ traj_quantiles = (
         pl.col("pas").quantile(0.5).alias("pas_median"),
         pl.col("pas").quantile(0.9).alias("pas_90th_percentile"),
     ])
+    .sort("time")
 )
 ```
 
